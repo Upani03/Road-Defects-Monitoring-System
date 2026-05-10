@@ -1,328 +1,253 @@
-# Road Defect Detection System
+# 🛣️ Road Detect Monitoring System
 
-This project contains four Jupyter notebooks for detecting different types of road defects from video files. Each notebook processes a video, extracts frames, analyzes image quality, applies adaptive filtering, and detects specific road defects.
+A computer vision pipeline built in Python that extracts frames from road survey videos, analyses and removes noise degradations, and automatically detects common road defects including edge cracking, pedestrian crossings, ravelling, and potholes.
 
-## Prerequisites
+---
 
-### System Requirements
-- Python 3.8 or higher
-- Jupyter Notebook or JupyterLab
-- Windows/Linux/Mac with OpenCV support
+## 📋 Table of Contents
 
-### Installation
+- [Overview](#overview)
+- [Project Structure](#project-structure)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Pipeline Stages](#pipeline-stages)
+  - [1. Frame Extraction](#1-frame-extraction)
+  - [2. Noise Analysis & Filtering](#2-noise-analysis--filtering)
+  - [3. Road Defect Detection](#3-road-defect-detection)
+- [Output Folders](#output-folders)
+- [Noise Types Detected](#noise-types-detected)
+- [Defect Types Detected](#defect-types-detected)
+- [Results Summary](#results-summary)
 
-1. **Create and activate virtual environment:**
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate  # On Windows
-   # or source .venv/bin/activate  # On Mac/Linux
-   ```
+---
 
-2. **Install required packages:**
-   ```bash
-   pip install opencv-python numpy pandas matplotlib pillow
-   ```
+## Overview
 
-3. **Launch Jupyter:**
-   ```bash
-   jupyter notebook
-   ```
+This project implements a full image processing pipeline for road condition monitoring. Given an input video of a road surface, the system:
+
+1. Extracts 30 equally distributed frames from the video
+2. Scores each frame by noise severity and selects the most degraded ones for analysis
+3. Converts frames to grayscale and plots pixel intensity histograms
+4. Classifies the type of noise present in each frame using statistical analysis
+5. Applies the most appropriate noise removal filter per frame
+6. Generates side-by-side visual comparisons of original vs. filtered frames
+7. Runs four independent defect detectors on the cleaned frames
+8. Saves all outputs with annotated bounding boxes and a full summary report
+
+---
 
 ## Project Structure
 
 ```
-new imageprocessing/
-├── videos/                              # Video input files
-│   ├── pedestrianCrossingMarkRemoval_01.mp4
-│   ├── edgeCracking_06.mp4
-│   ├── ravelling.mp4
-│   └── roadPothholes.mp4
+project/
 │
-├── video1.ipynb                         # Pedestrian crossing detection
-├── video2.ipynb                         # Edge cracking detection
-├── video3.ipynb                         # Ravelling detection
-├── video4.ipynb                         # Pothole detection
+├── videos/
+│   └── all_in_one.mp4          # Input road survey video
 │
-├── extracted_All_framesVideo1/          # Extracted frames from each video
-├── extracted_All_framesVideo2/
-├── extracted_All_framesVideo3/
-├── extracted_All_framesVideo4/
+├── extracted_30_frames/        # 30 equally spaced frames from video
+├── grayscale_frames/           # Grayscale versions of selected frames
+├── histograms/                 # Pixel intensity histogram plots
+├── filtered_frames/            # Noise-removed frames (used for defect detection)
+├── comparisons/                # Side-by-side original vs. filtered plots
 │
-├── filteredVideo1/                      # Adaptively filtered frames
-├── filteredVideo2/
-├── filteredVideo3/
-├── filteredVideo4/
+├── detectedEdgeCrackingFinal/  # Frames with edge cracks marked in GREEN
+├── detectedCrossingFinal/      # Frames with pedestrian crossings marked in BLUE
+├── detectedRavellingFinal/     # Frames with ravelling marked in RED
+├── detectedPotholeFinal/       # Frames with potholes marked in CYAN
 │
-├── detectedCrossingVideo1/              # Detection output with marked boxes
-├── detectedEdgeCrackingVideo2/
-├── detectedRavellingVideo3/
-├── detectedPotholeVideo4/
-│
-└── README.md                            # This file
-```
-
-## Video Notebooks Overview
-
-### Video1: Pedestrian Crossing Detection
-**Input:** `pedestrianCrossingMarkRemoval_01.mp4`  
-**Purpose:** Detects pedestrian crossing stripes and white lane markings  
-**Output folder:** `detectedCrossingVideo1/`  
-**Detection method:** White paint stripe detection using morphological operations
-
-**How to run:**
-1. Open `video1.ipynb` in Jupyter
-2. Run cells in order (1-10)
-3. Check output in `detectedCrossingVideo1/` folder
-
----
-
-### Video2: Edge Cracking Detection
-**Input:** `edgeCracking_06.mp4`  
-**Purpose:** Detects road edge cracks and margin cracking patterns  
-**Output folder:** `detectedEdgeCrackingVideo2/`  
-**Detection method:** Multi-directional edge detection with curvature analysis
-
-**Key features:**
-- Detects both linear and curved crack patterns
-- Analyzes vertex count for curvature detection
-- Uses multi-directional morphological kernels
-
-**How to run:**
-1. Open `video2.ipynb` in Jupyter
-2. Run cells in order (1-10)
-3. Check output in `detectedEdgeCrackingVideo2/` folder
-
----
-
-### Video3: Ravelling Detection
-**Input:** `ravelling.mp4`  
-**Purpose:** Detects surface ravelling (aggregate loss, texture degradation)  
-**Output folder:** `detectedRavellingVideo3/`  
-**Detection method:** Light spot detection and multi-scale texture analysis
-
-**Key features:**
-- Detects light/bright spots (exposed aggregate)
-- Multi-scale texture variance analysis
-- Identifies rough surface regions
-
-**How to run:**
-1. Open `video3.ipynb` in Jupyter
-2. Run cells in order (1-10)
-3. Check output in `detectedRavellingVideo3/` folder
-
----
-
-### Video4: Pothole Detection
-**Input:** `roadPothholes.mp4`  
-**Purpose:** Detects road potholes and surface depressions  
-**Output folder:** `detectedPotholeVideo4/`  
-**Detection method:** Adaptive dark region detection
-
-**Key features:**
-- Detects darkest connected regions (potholes appear darker)
-- Adaptive thresholding based on pixel histogram
-- Multi-frame analysis for consistency
-
-**How to run:**
-1. Open `video4.ipynb` in Jupyter
-2. Run cells in order (1-12)
-3. Check output in `detectedPotholeVideo4/` folder
-
----
-
-## Step-by-Step Execution Guide
-
-### For Each Notebook, Follow This Sequence:
-
-**Cell 1-2:** Import libraries and set paths
-- Sets video file path
-- Creates output folder structure
-
-**Cell 3:** Open video file
-- Verifies video can be opened
-- Displays video properties (FPS, duration, total frames)
-
-**Cell 4:** Extract frames
-- Saves every 5th frame as JPG
-- Creates `extracted_All_framesVideoX/` folder with numbered images
-
-**Cell 5:** Degradation analysis
-- Analyzes 30 random frames
-- Detects: noise, illumination issues, blur
-- Displays histograms
-- Creates pandas DataFrame with degradation flags
-
-**Cell 6:** Adaptive filtering
-- Applies denoising to noisy frames
-- Applies CLAHE contrast enhancement to illumination-affected frames
-- Applies sharpening to blurry frames
-- Saves filtered images to `filteredVideoX/` folder
-
-**Cell 7:** Defect-specific detection
-- Runs detection algorithm on filtered frames
-- Marks detected defects with colored bounding boxes
-- Saves marked images to `detectedVideoX/` folder
-- Displays preview of detections
-
-### Example Execution (Video1):
-
-```
-1. jupyter notebook
-2. Open video1.ipynb
-3. Run all cells sequentially (Ctrl+Enter)
-4. Wait for frame extraction (~30-60 seconds)
-5. Wait for degradation analysis (~30-60 seconds)
-6. Wait for filtering (~30-60 seconds)
-7. Wait for detection (~30-60 seconds)
-8. View results in detectedCrossingVideo1/ folder
+├── noise_detection_report.csv  # Per-frame noise classification table
+├── final.ipynb                 # Main Jupyter Notebook (full pipeline)
+└── README.md
 ```
 
 ---
 
-## Output Interpretation
+## Requirements
 
-### Detection Output Files
+- Python 3.8+
+- Jupyter Notebook or JupyterLab
 
-Each detection output folder contains images with colored bounding boxes:
+### Python Libraries
 
-| Video | Color | Defect Type |
-|-------|-------|-------------|
-| video1 | Green | Pedestrian crossing stripes |
-| video2 | Green | Edge cracks |
-| video3 | Red | Ravelling regions |
-| video4 | Red | Potholes/dark regions |
+| Library | Purpose |
+|---|---|
+| `opencv-python` | Image reading, filtering, morphology, contour detection |
+| `numpy` | Array operations and statistical calculations |
+| `pandas` | Noise report DataFrame and CSV export |
+| `matplotlib` | Histogram plots and comparison figures |
 
-### Console Output Example
+---
+
+## Installation
+
+```bash
+# 1. Clone or download the project
+git clone <your-repo-url>
+cd road-detect-monitoring
+
+# 2. Install dependencies
+pip install opencv-python numpy pandas matplotlib
+
+# 3. Place your video inside the videos/ folder
+mkdir videos
+# Copy your video as: videos/all_in_one.mp4
+
+# 4. Launch Jupyter and open the notebook
+jupyter notebook final.ipynb
+```
+
+---
+
+## Usage
+
+Open `final.ipynb` in Jupyter and **run all cells in order** from top to bottom. Each stage depends on the outputs of the previous one.
 
 ```
-Processed frames: 139
-Total potholes detected: 1154
-Frames with detections: 139
-Output: detectedPotholeVideo4/
+Cell 1  → Import libraries
+Cell 2  → Verify video file
+Cell 3  → Extract 30 frames
+Cell 4  → Select frames by noise score
+Cell 5  → Grayscale conversion + histogram plots
+Cell 6  → Noise classification (statistical analysis)
+Cell 7  → Apply noise-specific filters
+Cell 8  → Generate original vs. filtered comparisons
+Cell 9  → Edge cracking detection
+Cell 10 → Pedestrian crossing detection
+Cell 11 → Ravelling detection
+Cell 12 → Pothole detection
+Cell 13 → Full pipeline summary report
 ```
 
-### Understanding Statistics
+---
 
-- **Processed frames:** Total number of extracted frames analyzed
-- **Total detected:** Total number of defects marked across all frames
-- **Frames with detections:** Number of frames that contain at least one detection
-- **Average per frame:** Detections ÷ frames with detections
+## Pipeline Stages
+
+### 1. Frame Extraction
+
+Frames are sampled at equal intervals across the entire video using `numpy.linspace`, ensuring coverage of all road segments regardless of video length.
+
+```
+Video (908 frames) → 30 equally spaced frames → extracted_30_frames/
+```
+
+Frames are saved as `frame_01.jpg` through `frame_30.jpg`.
+
+### 2. Noise Analysis & Filtering
+
+#### Frame Selection by Noise Score
+
+Each extracted frame is scored using a composite metric:
+
+| Component | Description | Weight |
+|---|---|---|
+| Laplacian variance | Measures texture and edge noise | 40% |
+| Local std-dev | Captures grain and speckle | 30% |
+| Salt-and-pepper ratio | Proportion of extreme pixels (≤5 or ≥250) | 20% |
+| Speckle index | Std/mean ratio (multiplicative noise) | 10% |
+
+The 30 highest-scoring frames are selected for the full analysis pipeline.
+
+#### Grayscale Conversion & Histograms
+
+Each frame is converted to grayscale using `cv2.COLOR_BGR2GRAY`. A pixel intensity histogram is plotted and saved alongside the grayscale image for visual inspection of the brightness distribution.
+
+#### Noise Classification
+
+Each frame is statistically analysed to classify the noise type present:
+
+| Noise Type | Detection Method |
+|---|---|
+| **Gaussian** | Residual std-dev after blur > 8 AND skewness < 1.5 |
+| **Salt & Pepper** | More than 0.2% pixels at intensity ≤5 or ≥250 |
+| **Speckle** | Mean squared ratio of residual to local mean > 0.004 |
+| **Uniform** | Kurtosis < −0.5 (platykurtic distribution) |
+
+Results are saved to `noise_detection_report.csv`.
+
+#### Noise Removal Filters
+
+The filter applied to each frame is chosen based on the detected noise type:
+
+| Detected Noise | Filter Applied |
+|---|---|
+| Salt & Pepper | Median filter (5×5 kernel) |
+| Gaussian | Gaussian blur (5×5 kernel) |
+| Speckle | Bilateral filter (d=9, σ=75) |
+| Uniform | Gaussian blur (3×3 kernel, mild) |
+| None detected | Mild Gaussian blur (3×3, default) |
+
+### 3. Road Defect Detection
+
+All four detectors operate on the noise-filtered grayscale frames. Each saves annotated colour images to its own output folder.
+
+#### Edge Cracking (GREEN)
+Uses bilateral filtering, Canny edge detection, and multi-directional morphological operations to identify elongated crack contours. Filters out shadows and vegetation using aspect ratio, solidity, and area constraints. Operates on the lower 70% of the frame (road surface only).
+
+#### Pedestrian Crossing (BLUE)
+Applies CLAHE contrast enhancement and multi-level brightness thresholding to detect bright horizontal stripe regions characteristic of zebra crossings. Contours are filtered by width-to-height ratio and solidity.
+
+#### Ravelling (RED)
+Detects road surface deterioration (aggregate loss, surface roughness) using multi-scale texture variance analysis, top-hat morphology for exposed aggregate, and Sobel/Laplacian edge density. Combines fine, medium, and coarse scale responses.
+
+#### Pothole (CYAN)
+Identifies the darkest connected regions adaptively using the 20th percentile of the local histogram. Filters out uniform shadows by requiring internal texture (std-dev > 8) and compact shape (aspect ratio < 4, solidity > 0.2).
 
 ---
 
-## Troubleshooting
+## Output Folders
 
-### Issue: "FileNotFoundError: No images found in 'extracted_All_framesVideoX'"
-
-**Solution:**
-- Frame extraction failed; check if video file exists and is readable
-- Run the video validation cell to verify file can be opened
-- Check `videos/` folder for correct filename spelling
-
-### Issue: "Error: Cannot open video file"
-
-**Solution:**
-- Verify video file path is correct
-- Check video file format (should be .mp4)
-- Try using a different video codec
-- Ensure video file is not corrupted
-
-### Issue: No detections found (0 defects detected)
-
-**Solution:**
-- Check if defects are visible in the original extracted frames
-- Defect characteristics may not match algorithm expectations
-- Try adjusting detection thresholds in the detection cell
-- Review sample frames in `detectedVideoX/` folder (may show faint markings)
-
-### Issue: Too many false detections
-
-**Solution:**
-- Reduce the detection sensitivity by adjusting thresholds
-- Increase minimum area constraints
-- Modify solidity or aspect ratio filters
-- Review Cell 7 (detection cell) and adjust parameters
+| Folder | Contents |
+|---|---|
+| `extracted_30_frames/` | Raw JPG frames from the video |
+| `grayscale_frames/` | Grayscale versions of all 30 selected frames |
+| `histograms/` | PNG histogram plots per frame |
+| `filtered_frames/` | Noise-cleaned frames used as input to defect detection |
+| `comparisons/` | 2×2 grid plots: original, filtered, histogram overlay |
+| `detectedEdgeCrackingFinal/` | Annotated frames — cracks in GREEN boxes |
+| `detectedCrossingFinal/` | Annotated frames — crossings in BLUE boxes |
+| `detectedRavellingFinal/` | Annotated frames — ravelling in RED boxes |
+| `detectedPotholeFinal/` | Annotated frames — potholes in CYAN boxes |
+| `noise_detection_report.csv` | Per-frame noise type classification with statistics |
 
 ---
 
-## Customization Guide
+## Noise Types Detected
 
-### To Adjust Detection Sensitivity
-
-Open the detection cell (Cell 7) in your notebook and modify these parameters:
-
-**For video1 (Pedestrian crossing):**
-- Line: `_, white_mask = cv2.threshold(gray_eq, 185, 255, cv2.THRESH_BINARY)`
-- Lower threshold (e.g., 180) = more sensitive
-- Higher threshold (e.g., 190) = less sensitive
-
-**For video2 (Edge cracking):**
-- Line: `edges = cv2.Canny(bilateral, 40, 120)`
-- Lower first value = more sensitive to edges
-
-**For video3 (Ravelling):**
-- Line: `cv2.threshold(bright_spots, 50, 255, cv2.THRESH_BINARY)`
-- Lower threshold = detect darker spots as ravelling
-
-**For video4 (Potholes):**
-- Line: `dark_threshold = max(50, min(100, dark_threshold_idx))`
-- Increase upper value = detect lighter areas as potholes
+| Type | Description |
+|---|---|
+| **Gaussian noise** | Random intensity variations due to sensor or lighting conditions |
+| **Salt & Pepper noise** | Isolated extreme-value pixels (pure black or pure white) |
+| **Uniform noise** | Evenly distributed pixel-level disturbance across the intensity range |
+| **Speckle noise** | Multiplicative granular noise proportional to local brightness |
 
 ---
 
-## Performance Notes
+## Defect Types Detected
 
-| Video | Frames | Duration | Typical Runtime |
-|-------|--------|----------|-----------------|
-| video1 | ~300 | ~10 sec | 3-5 minutes |
-| video2 | ~200 | ~7 sec | 2-4 minutes |
-| video3 | ~140 | ~5 sec | 2-3 minutes |
-| video4 | ~140 | ~23 sec | 2-3 minutes |
-
-**Note:** Runtimes depend on system specs and image resolution (640x480)
+| Defect | Marker Colour | Typical Cause |
+|---|---|---|
+| Edge Cracking | GREEN | Structural fatigue, edge settlement, sub-base failure |
+| Pedestrian Crossing | BLUE | Road marking identification for safety audit |
+| Ravelling | RED | Surface aggregate loss, weathering, poor binder |
+| Pothole | CYAN | Water ingress, crack propagation, heavy traffic load |
 
 ---
 
-## Output File Formats
+## Results Summary
 
-- **Extracted frames:** JPG (640×480 resolution)
-- **Filtered frames:** JPG (adaptive preprocessing applied)
-- **Marked detections:** JPG (original + colored bounding boxes + label count)
-- **Analysis data:** Pandas DataFrame (displayed in notebook, not saved)
+Sample results from `videos/all_in_one.mp4` (908 frames, 30 FPS):
 
----
+| Stage | Result |
+|---|---|
+| Frames extracted | 30 |
+| Frames with Gaussian noise | 30 |
+| Frames with Salt & Pepper noise | 8 |
+| Frames with Speckle noise | 24 |
+| Frames with Uniform noise | 2 |
+| Edge crack detections | 179 (29 frames) |
+| Pedestrian crossing detections | 206 (27 frames) |
+| Ravelling detections | 5 (2 frames) |
+| Pothole detections | 327 (23 frames) |
 
-## Quality Assurance Checklist
-
-Before considering detection complete:
-
-- [ ] Video file opens successfully (check console output for FPS, frame count)
-- [ ] Frames extracted to correct folder (check extracted_All_framesVideoX/)
-- [ ] Degradation analysis shows appropriate flags (noise/illumination/blur)
-- [ ] Filtered frames show preprocessing applied (check filteredVideoX/)
-- [ ] Detection output folder created (check detectedVideoX/)
-- [ ] Sample previews display in notebook
-- [ ] Detection count > 0 (or expected for your video content)
-
----
-
-## Contact & Support
-
-For issues or questions:
-1. Review the troubleshooting section above
-2. Check cell output messages for specific errors
-3. Verify input video files are in `videos/` folder
-4. Try running a single cell at a time to isolate issues
-
----
-
-## Version Info
-
-- **Python:** 3.8+
-- **OpenCV:** 4.5+
-- **NumPy:** 1.19+
-- **Pandas:** 1.2+
-- **Matplotlib:** 3.3+
-- **Pillow:** 8.0+
-
-Last updated: May 2026
+> **Conclusion:** Noise degradations were successfully identified using histogram analysis and statistical observation. After applying filtering techniques, random pixel disturbances were reduced, image smoothness and clarity improved, and histogram distributions became more stable.
